@@ -1,0 +1,6 @@
+[package]
+name = "simple-led-control"
+version = "0.1.0"
+authors = ["Andre <noromoron@gmail.com>"]
+
+[dependencies]
