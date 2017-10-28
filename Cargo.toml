@@ -1,6 +1,17 @@
 [package]
-name = "simple-led-control"
-version = "0.1.0"
+name = "slc"
+version = "0.2.0"
 authors = ["Andre <noromoron@gmail.com>"]
 
 [dependencies]
+clap = "~2.27"
+
+
+[profile.release]
+opt-level = 3
+debug = false
+rpath = false
+lto = true
+debug-assertions = false
+codegen-units = 1
+panic = 'abort'
