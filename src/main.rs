@@ -1,11 +1,12 @@
+extern crate clap;
+
+use clap::*;
 use std::net::UdpSocket;
-use std::env::args;
-use std::num::ParseIntError;
 
 
 fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, r: u8, g: u8, b: u8) -> usize {
     if len == 0 {
-        return 0
+        return 0;
     }
     let mut bytes = vec![0 as u8; len*3];
     for i in 0..len {
@@ -13,20 +14,119 @@ fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, r: u8, g: u8, b: u8)
         bytes[(i*3) + 1] = r;
         bytes[(i*3) + 2] = b;
     }
-    sock.send_to(&bytes, &address).expect("error sending data") / 3
+    return sock.send_to(&bytes, &address).expect("error sending data");
+}
+
+fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, r: u8, g: u8, b: u8, w: u8) -> usize {
+    if len == 0 {
+        return 0;
+    }
+    let mut bytes = vec![0 as u8; len*4];
+    for i in 0..len {
+        bytes[(i*4) + 0] = g;
+        bytes[(i*4) + 1] = r;
+        bytes[(i*4) + 2] = b;
+        bytes[(i*4) + 3] = w;
+    }
+    return sock.send_to(&bytes, &address).expect("error sending data");
 }
 
 
 fn main() {
     let socket = UdpSocket::bind("0.0.0.0:10400").expect(
         "Could not setup socket");
+    let address: String;
+    let number_of_leds: usize;
+    let red_value: u8;
+    let green_value: u8;
+    let blue_value: u8;
+    let white_value: u8;
+    let dedicated_white_led: bool;
 
-    let address: String = args().nth(1).expect("No address");
-    let len: Result<usize, ParseIntError> = args().nth(2).expect("No length").parse();
-    let red: Result<u8, ParseIntError> = args().nth(3).expect("No red color value").parse();
-    let gre: Result<u8, ParseIntError> = args().nth(4).expect("No green color value").parse();
-    let blu: Result<u8, ParseIntError> = args().nth(5).expect("No blue color value").parse();
+    let matches = App::new("simple-led-control")
+                            .version("0.2")
+                            .author("Andre Julius <noromoron@gmail.com>")
+                            .about("Control led strips")
+                            .arg(Arg::with_name("verbose")
+                                .short("v")
+                                .long("verbose")
+                                .multiple(true)
+                                .help("Show some debugging prints"))
+                            .arg(Arg::with_name("number")
+                                .short("n")
+                                .long("number-of-leds")
+                                .help("Sets the number of leds to fill")
+                                .takes_value(true))
+                            .arg(Arg::with_name("red")
+                                .short("r")
+                                .long("color-red")
+                                .help("Sets the red value")
+                                .takes_value(true))
+                            .arg(Arg::with_name("green")
+                                .short("g")
+                                .long("color-green")
+                                .help("Sets the green value")
+                                .takes_value(true))
+                            .arg(Arg::with_name("blue")
+                                .short("b")
+                                .long("color-blue")
+                                .help("Sets the blue value")
+                                .takes_value(true))
+                            .arg(Arg::with_name("white")
+                                .short("w")
+                                .long("color-white")
+                                .help("Sets the white value")
+                                .takes_value(true))
+                            .arg(Arg::with_name("color-mode")
+                                .short("c")
+                                .long("color-mode")
+                                .help("Sets the color mode. rgb, rgbw")
+                                .takes_value(true))
+                            .arg(Arg::with_name("address")
+                                .help("Set the address of the led strip.")
+                                .required(true)
+                                .index(1))
+                            .get_matches();
 
-    let bytes_sent = fill_rgb(&socket, &address, len.unwrap(), red.unwrap(), gre.unwrap(), blu.unwrap());
-    println!("sent: {:?}", bytes_sent);
+    address = value_t!(matches.value_of("address"), String).unwrap();
+    number_of_leds = value_t!(matches.value_of("number"), usize).unwrap_or(1);
+
+    // Get all red, green and blue values
+    red_value = value_t!(matches.value_of("red"),   u8).unwrap_or(0);
+    green_value = value_t!(matches.value_of("green"), u8).unwrap_or(0);
+    blue_value = value_t!(matches.value_of("blue"),  u8).unwrap_or(0);
+
+    // 
+    match matches.value_of("white") {
+        Some(w) => {
+            drop(w);
+            dedicated_white_led = true;
+            white_value = value_t!(matches.value_of("white"), u8).unwrap();
+        },
+        None => {
+            dedicated_white_led = false;
+            white_value = 0;
+        }
+    }
+
+    let color_mode = matches.value_of("color_mode").unwrap_or("rgb");
+
+    match matches.occurrences_of("v") {
+        0 => {},
+        1 => {
+            println!("Using address: {}", address);
+            println!("Value for red: {}, green: {}, blue: {}, white: {}", red_value, green_value, blue_value, white_value);
+            println!("Using a dedicated white led? {}", dedicated_white_led);
+            println!("Leds to fill: {}", number_of_leds);
+        },
+        2 | _ => {},
+    }
+
+    if dedicated_white_led {
+        println!("Bytes sent: {}", fill_rgbw(&socket, &String::from(address),
+            number_of_leds, red_value, green_value, blue_value, white_value));
+    } else {
+        println!("Bytes sent: {}", fill_rgb(&socket, &String::from(address),
+            number_of_leds, red_value, green_value, blue_value));
+    }
 }
