@@ -89,7 +89,7 @@ fn main() {
                             .get_matches();
 
     address = value_t!(matches.value_of("address"), String).unwrap();
-    number_of_leds = value_t!(matches.value_of("number"), usize).unwrap_or(1);
+    number_of_leds = value_t!(matches.value_of("number"), usize).unwrap_or(0);
 
     // Get all red, green and blue values
     red_value = value_t!(matches.value_of("red"),   u8).unwrap_or(0);
@@ -101,12 +101,12 @@ fn main() {
         Some(w) => {
             drop(w);
             dedicated_white_led = true;
-            white_value = value_t!(matches.value_of("white"), u8).unwrap();
+            white_value = value_t!(matches.value_of("white"), u8).unwrap_or(0);
         },
         None => {
             dedicated_white_led = false;
             white_value = 0;
-        }
+        },
     }
 
     let color_mode = matches.value_of("color_mode").unwrap_or("rgb");
