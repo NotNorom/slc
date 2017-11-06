@@ -4,29 +4,33 @@ use clap::*;
 use std::net::UdpSocket;
 
 
-fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, r: u8, g: u8, b: u8) -> usize {
+fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u8, g: u8, b: u8) -> usize {
     if len == 0 {
         return 0;
     }
-    let mut bytes = vec![0 as u8; len*3];
-    for i in 0..len {
-        bytes[(i*3) + 0] = g;
-        bytes[(i*3) + 1] = r;
-        bytes[(i*3) + 2] = b;
+    let mut bytes = vec![0 as u8; 1+len*3];
+    bytes[0] = seq_number;
+    for i in 1..len {
+        // the recieving strip recieves SEQ|G,R,B,G,...
+        bytes[(i*3) + 1] = g;
+        bytes[(i*3) + 2] = r;
+        bytes[(i*3) + 0] = b;
     }
     return sock.send_to(&bytes, &address).expect("error sending data");
 }
 
-fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, r: u8, g: u8, b: u8, w: u8) -> usize {
+fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u8, g: u8, b: u8, w: u8) -> usize {
     if len == 0 {
         return 0;
     }
-    let mut bytes = vec![0 as u8; len*4];
-    for i in 0..len {
-        bytes[(i*4) + 0] = g;
-        bytes[(i*4) + 1] = r;
-        bytes[(i*4) + 2] = b;
-        bytes[(i*4) + 3] = w;
+    let mut bytes = vec![0 as u8; 1+len*4];
+    bytes[0] = seq_number;
+    for i in 1..len {
+        // the recieving strip recieves SEQ|G,R,B,W,G,...
+        bytes[(i*4) + 1] = g;
+        bytes[(i*4) + 2] = r;
+        bytes[(i*4) + 3] = b;
+        bytes[(i*4) + 0] = w;
     }
     return sock.send_to(&bytes, &address).expect("error sending data");
 }
@@ -35,8 +39,10 @@ fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, r: u8, g: u8, b: u8
 fn main() {
     let socket = UdpSocket::bind("0.0.0.0:10400").expect(
         "Could not setup socket");
+    socket.set_broadcast(true);
     let address: String;
     let number_of_leds: usize;
+    let sequence_number: u8;
     let red_value: u8;
     let green_value: u8;
     let blue_value: u8;
@@ -56,6 +62,11 @@ fn main() {
                                 .short("n")
                                 .long("number-of-leds")
                                 .help("Sets the number of leds to fill")
+                                .takes_value(true))
+                            .arg(Arg::with_name("sequence")
+                                .short("s")
+                                .long("sequence-number")
+                                .help("Sets the sequence number")
                                 .takes_value(true))
                             .arg(Arg::with_name("red")
                                 .short("r")
@@ -91,6 +102,8 @@ fn main() {
     address = value_t!(matches.value_of("address"), String).unwrap();
     number_of_leds = value_t!(matches.value_of("number"), usize).unwrap_or(0);
 
+    sequence_number = value_t!(matches.value_of("sequence"), u8).unwrap_or(0);
+
     // Get all red, green and blue values
     red_value = value_t!(matches.value_of("red"),   u8).unwrap_or(0);
     green_value = value_t!(matches.value_of("green"), u8).unwrap_or(0);
@@ -124,9 +137,11 @@ fn main() {
 
     if dedicated_white_led {
         println!("Bytes sent: {}", fill_rgbw(&socket, &String::from(address),
-            number_of_leds, red_value, green_value, blue_value, white_value));
+            number_of_leds, sequence_number, red_value, green_value,
+            blue_value, white_value));
     } else {
         println!("Bytes sent: {}", fill_rgb(&socket, &String::from(address),
-            number_of_leds, red_value, green_value, blue_value));
+            number_of_leds, sequence_number, red_value, green_value,
+            blue_value));
     }
 }
