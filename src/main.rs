@@ -8,13 +8,17 @@ fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u
     if len == 0 {
         return 0;
     }
-    let mut bytes = vec![0 as u8; 1+len*3];
+    let offset = 4;
+    let mut bytes = vec![0 as u8; offset+len*3];
     bytes[0] = seq_number;
-    for i in 1..len {
-        // the recieving strip recieves SEQ|G,R,B,G,...
-        bytes[(i*3) + 1] = g;
-        bytes[(i*3) + 2] = r;
-        bytes[(i*3) + 0] = b;
+    bytes[1] = 0;
+    bytes[2] = 0;
+    bytes[3] = 0;
+    for i in offset..len {
+        // the strip recieves SEQ|G,R,B,G,...
+        bytes[(i*3) + 0 + offset] = g;
+        bytes[(i*3) + 1 + offset] = r;
+        bytes[(i*3) + 2 + offset] = b;
     }
     return sock.send_to(&bytes, &address).expect("error sending data");
 }
@@ -23,14 +27,18 @@ fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: 
     if len == 0 {
         return 0;
     }
-    let mut bytes = vec![0 as u8; 1+len*4];
+    let offset = 4;
+    let mut bytes = vec![0 as u8; offset+len*4];
     bytes[0] = seq_number;
-    for i in 1..len {
-        // the recieving strip recieves SEQ|G,R,B,W,G,...
-        bytes[(i*4) + 1] = g;
-        bytes[(i*4) + 2] = r;
-        bytes[(i*4) + 3] = b;
-        bytes[(i*4) + 0] = w;
+    bytes[1] = 0;
+    bytes[2] = 0;
+    bytes[3] = 0;
+    for i in offset..len {
+        // the strip recieves SEQ|G,R,B,W,G,...
+        bytes[(i*4) + 0 + offset] = g;
+        bytes[(i*4) + 1 + offset] = r;
+        bytes[(i*4) + 2 + offset] = b;
+        bytes[(i*4) + 3 + offset] = w;
     }
     return sock.send_to(&bytes, &address).expect("error sending data");
 }
