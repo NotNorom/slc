@@ -10,12 +10,13 @@ fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u
     }
     let offset = 4;
     let mut bytes = vec![0 as u8; offset+len*3];
-    bytes[0] = seq_number;
-    bytes[1] = 0;
+    // VERSION,SEQ,PAD,PAD|G,R,B,G,...
+    bytes[0] = 2;
+    bytes[1] = seq_number;
     bytes[2] = 0;
     bytes[3] = 0;
     for i in offset..len {
-        // the strip recieves SEQ|G,R,B,G,...
+        
         bytes[(i*3) + 0 + offset] = g;
         bytes[(i*3) + 1 + offset] = r;
         bytes[(i*3) + 2 + offset] = b;
@@ -29,12 +30,12 @@ fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: 
     }
     let offset = 4;
     let mut bytes = vec![0 as u8; offset+len*4];
-    bytes[0] = seq_number;
-    bytes[1] = 0;
+    // VERSION,SEQ,PAD,PAD|G,R,B,W,G,...
+    bytes[0] = 2;
+    bytes[1] = seq_number;
     bytes[2] = 0;
     bytes[3] = 0;
     for i in offset..len {
-        // the strip recieves SEQ|G,R,B,W,G,...
         bytes[(i*4) + 0 + offset] = g;
         bytes[(i*4) + 1 + offset] = r;
         bytes[(i*4) + 2 + offset] = b;
