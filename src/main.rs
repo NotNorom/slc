@@ -15,7 +15,7 @@ fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u
     bytes[1] = seq_number;
     bytes[2] = 0;
     bytes[3] = 0;
-    for i in offset..len {
+    for i in 0..len {
         
         bytes[(i*3) + 0 + offset] = g;
         bytes[(i*3) + 1 + offset] = r;
@@ -35,7 +35,7 @@ fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: 
     bytes[1] = seq_number;
     bytes[2] = 0;
     bytes[3] = 0;
-    for i in offset..len {
+    for i in 0..len {
         bytes[(i*4) + 0 + offset] = g;
         bytes[(i*4) + 1 + offset] = r;
         bytes[(i*4) + 2 + offset] = b;
