@@ -3,63 +3,43 @@ extern crate clap;
 use clap::*;
 use std::net::UdpSocket;
 
-
-fn fill_rgb(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u8, g: u8, b: u8) -> usize {
+fn send(sock: &UdpSocket, address: &String, seq: u8, hid: u8, ofs:u8, len: u16, r: u8, g: u8, b: u8, w: u8) -> usize {
     if len == 0 {
         return 0;
     }
-    let offset = 4;
-    let mut bytes = vec![0 as u8; offset+len*3];
-    // VERSION,SEQ,PAD,PAD|G,R,B,G,...
-    bytes[0] = 2;
-    bytes[1] = seq_number;
-    bytes[2] = 0;
-    bytes[3] = 0;
+    let header_len = 4;
+    let mut packet = vec![0 as u8; (header_len + len*4) as usize];
+    // VER|SEQ|HID|OFS|G,R,B,W,G,...
+    packet[0] = 2; // version
+    packet[1] = seq; // sequence
+    packet[2] = hid; // host id
+    packet[3] = ofs; // offset
     for i in 0..len {
-        
-        bytes[(i*3) + 0 + offset] = g;
-        bytes[(i*3) + 1 + offset] = r;
-        bytes[(i*3) + 2 + offset] = b;
+        packet[(header_len + (i*4) + 0) as usize] = g;
+        packet[(header_len + (i*4) + 1) as usize] = r;
+        packet[(header_len + (i*4) + 2) as usize] = b;
+        packet[(header_len + (i*4) + 3) as usize] = w;
     }
-    return sock.send_to(&bytes, &address).expect("error sending data");
-}
-
-fn fill_rgbw(sock: &UdpSocket, address: &String, len: usize, seq_number: u8, r: u8, g: u8, b: u8, w: u8) -> usize {
-    if len == 0 {
-        return 0;
-    }
-    let offset = 4;
-    let mut bytes = vec![0 as u8; offset+len*4];
-    // VERSION,SEQ,PAD,PAD|G,R,B,W,G,...
-    bytes[0] = 2;
-    bytes[1] = seq_number;
-    bytes[2] = 0;
-    bytes[3] = 0;
-    for i in 0..len {
-        bytes[(i*4) + 0 + offset] = g;
-        bytes[(i*4) + 1 + offset] = r;
-        bytes[(i*4) + 2 + offset] = b;
-        bytes[(i*4) + 3 + offset] = w;
-    }
-    return sock.send_to(&bytes, &address).expect("error sending data");
+    return sock.send_to(&packet, &address).expect("error sending data");
 }
 
 
 fn main() {
     let socket = UdpSocket::bind("0.0.0.0:10400").expect(
         "Could not setup socket");
-    socket.set_broadcast(true);
+    drop(socket.set_broadcast(true));
     let address: String;
-    let number_of_leds: usize;
     let sequence_number: u8;
+    let hostid: u8;
+    let offset: u8;
+    let number_of_leds: u16;
     let red_value: u8;
     let green_value: u8;
     let blue_value: u8;
     let white_value: u8;
-    let dedicated_white_led: bool;
 
     let matches = App::new("simple-led-control")
-                            .version("0.2")
+                            .version("0.3")
                             .author("Andre Julius <noromoron@gmail.com>")
                             .about("Control led strips")
                             .arg(Arg::with_name("verbose")
@@ -67,15 +47,25 @@ fn main() {
                                 .long("verbose")
                                 .multiple(true)
                                 .help("Show some debugging prints"))
-                            .arg(Arg::with_name("number")
-                                .short("n")
-                                .long("number-of-leds")
-                                .help("Sets the number of leds to fill")
-                                .takes_value(true))
                             .arg(Arg::with_name("sequence")
                                 .short("s")
                                 .long("sequence-number")
                                 .help("Sets the sequence number")
+                                .takes_value(true))
+                            .arg(Arg::with_name("hostid")
+                                .short("h")
+                                .long("hostid")
+                                .help("Sets the host id")
+                                .takes_value(true))
+                            .arg(Arg::with_name("offset")
+                                .short("o")
+                                .long("offset")
+                                .help("Sets the offset")
+                                .takes_value(true))
+                            .arg(Arg::with_name("number")
+                                .short("n")
+                                .long("number-of-leds")
+                                .help("Sets the number of leds to fill")
                                 .takes_value(true))
                             .arg(Arg::with_name("red")
                                 .short("r")
@@ -97,11 +87,6 @@ fn main() {
                                 .long("color-white")
                                 .help("Sets the white value")
                                 .takes_value(true))
-                            .arg(Arg::with_name("color-mode")
-                                .short("c")
-                                .long("color-mode")
-                                .help("Sets the color mode. rgb, rgbw")
-                                .takes_value(true))
                             .arg(Arg::with_name("address")
                                 .help("Set the address of the led strip.")
                                 .required(true)
@@ -109,48 +94,29 @@ fn main() {
                             .get_matches();
 
     address = value_t!(matches.value_of("address"), String).unwrap();
-    number_of_leds = value_t!(matches.value_of("number"), usize).unwrap_or(0);
 
     sequence_number = value_t!(matches.value_of("sequence"), u8).unwrap_or(0);
+    hostid = value_t!(matches.value_of("hostid"), u8).unwrap_or(0);
+    offset = value_t!(matches.value_of("offset"), u8).unwrap_or(0);
+    number_of_leds = value_t!(matches.value_of("number"), u16).unwrap_or(0);
 
     // Get all red, green and blue values
     red_value = value_t!(matches.value_of("red"),   u8).unwrap_or(0);
     green_value = value_t!(matches.value_of("green"), u8).unwrap_or(0);
     blue_value = value_t!(matches.value_of("blue"),  u8).unwrap_or(0);
-
-    // 
-    match matches.value_of("white") {
-        Some(w) => {
-            drop(w);
-            dedicated_white_led = true;
-            white_value = value_t!(matches.value_of("white"), u8).unwrap_or(0);
-        },
-        None => {
-            dedicated_white_led = false;
-            white_value = 0;
-        },
-    }
-
-    let color_mode = matches.value_of("color_mode").unwrap_or("rgb");
+    white_value = value_t!(matches.value_of("white"), u8).unwrap_or(0);
 
     match matches.occurrences_of("v") {
         0 => {},
         1 => {
             println!("Using address: {}", address);
             println!("Value for red: {}, green: {}, blue: {}, white: {}", red_value, green_value, blue_value, white_value);
-            println!("Using a dedicated white led? {}", dedicated_white_led);
             println!("Leds to fill: {}", number_of_leds);
         },
         2 | _ => {},
     }
 
-    if dedicated_white_led {
-        println!("Bytes sent: {}", fill_rgbw(&socket, &String::from(address),
-            number_of_leds, sequence_number, red_value, green_value,
-            blue_value, white_value));
-    } else {
-        println!("Bytes sent: {}", fill_rgb(&socket, &String::from(address),
-            number_of_leds, sequence_number, red_value, green_value,
-            blue_value));
-    }
+    println!("Bytes sent: {}", send(&socket, &String::from(address),
+        sequence_number, hostid, offset, number_of_leds, red_value, green_value,
+        blue_value, white_value));
 }
