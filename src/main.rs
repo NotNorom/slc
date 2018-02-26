@@ -3,9 +3,9 @@ extern crate clap;
 use clap::*;
 use std::net::UdpSocket;
 
-fn send(sock: &UdpSocket, address: &String, seq: u8, hid: u8, ofs:u8, len: u16, r: u8, g: u8, b: u8, w: u8) -> usize {
+fn send(sock: &UdpSocket, address: &String, seq: u8, hid: u8, ofs:u8, len: u16, r: u8, g: u8, b: u8, w: u8) -> std::io::Result<usize> {
     if len == 0 {
-        return 0;
+        return Ok(0);
     }
     let header_len = 4;
     let mut packet = vec![0 as u8; (header_len + len*4) as usize];
@@ -20,7 +20,8 @@ fn send(sock: &UdpSocket, address: &String, seq: u8, hid: u8, ofs:u8, len: u16, 
         packet[(header_len + (i*4) + 2) as usize] = b;
         packet[(header_len + (i*4) + 3) as usize] = w;
     }
-    return sock.send_to(&packet, &address).expect("error sending data");
+
+    return sock.send_to(&packet, &address);
 }
 
 
@@ -116,7 +117,13 @@ fn main() {
         2 | _ => {},
     }
 
-    println!("Bytes sent: {}", send(&socket, &String::from(address),
-        sequence_number, hostid, offset, number_of_leds, red_value, green_value,
-        blue_value, white_value));
+    match send(&socket, &String::from(address), sequence_number, hostid, offset, number_of_leds, red_value, green_value, blue_value, white_value) {
+        Err(e) => {
+            match e.get_ref() {
+                Some(inner_e) => println!("Error: {}", inner_e.description()),
+                None => println!("{:?}", e),
+            }
+        },
+        Ok(u) => println!("Bytes sent: {}", u),
+    };
 }
