@@ -41,7 +41,7 @@ fn main() {
     let white: u8;
 
     let matches = App::new("simple-led-control")
-                            .version("0.3")
+                            .version("0.3.1")
                             .author("Andre Julius <noromoron@gmail.com>")
                             .about("Control led strips")
                             .arg(Arg::with_name("verbose")
