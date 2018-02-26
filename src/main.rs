@@ -3,7 +3,8 @@ extern crate clap;
 use clap::*;
 use std::net::UdpSocket;
 
-fn send(sock: &UdpSocket, address: &String, seq: u8, hid: u8, ofs:u8, len: u16, r: u8, g: u8, b: u8, w: u8) -> std::io::Result<usize> {
+fn send(sock: &UdpSocket, address: &String, seq: u8, hid: u8, ofs:u8, len: u16,
+        r: u8, g: u8, b: u8, w: u8) -> std::io::Result<usize> {
     if len == 0 {
         return Ok(0);
     }
@@ -34,10 +35,10 @@ fn main() {
     let hostid: u8;
     let offset: u8;
     let number_of_leds: u16;
-    let red_value: u8;
-    let green_value: u8;
-    let blue_value: u8;
-    let white_value: u8;
+    let red: u8;
+    let green: u8;
+    let blue: u8;
+    let white: u8;
 
     let matches = App::new("simple-led-control")
                             .version("0.3")
@@ -102,22 +103,24 @@ fn main() {
     number_of_leds = value_t!(matches.value_of("number"), u16).unwrap_or(0);
 
     // Get all red, green and blue values
-    red_value = value_t!(matches.value_of("red"),   u8).unwrap_or(0);
-    green_value = value_t!(matches.value_of("green"), u8).unwrap_or(0);
-    blue_value = value_t!(matches.value_of("blue"),  u8).unwrap_or(0);
-    white_value = value_t!(matches.value_of("white"), u8).unwrap_or(0);
+    red = value_t!(matches.value_of("red"),   u8).unwrap_or(0);
+    green = value_t!(matches.value_of("green"), u8).unwrap_or(0);
+    blue = value_t!(matches.value_of("blue"),  u8).unwrap_or(0);
+    white = value_t!(matches.value_of("white"), u8).unwrap_or(0);
 
     match matches.occurrences_of("v") {
         0 => {},
         1 => {
             println!("Using address: {}", address);
-            println!("Value for red: {}, green: {}, blue: {}, white: {}", red_value, green_value, blue_value, white_value);
+            println!("Value for red: {}, green: {}, blue: {}, white: {}",
+                     red, green, blue, white);
             println!("Leds to fill: {}", number_of_leds);
         },
         2 | _ => {},
     }
 
-    match send(&socket, &String::from(address), sequence_number, hostid, offset, number_of_leds, red_value, green_value, blue_value, white_value) {
+    match send(&socket, &String::from(address), sequence_number, hostid,
+        offset, number_of_leds, red, green, blue, white) {
         Err(e) => {
             match e.get_ref() {
                 Some(inner_e) => println!("Error: {}", inner_e.description()),
