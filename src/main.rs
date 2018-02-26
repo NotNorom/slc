@@ -41,14 +41,14 @@ fn main() {
     let white: u8;
 
     let matches = App::new("simple-led-control")
-                            .version("0.3.1")
+                            .version("0.3.2")
                             .author("Andre Julius <noromoron@gmail.com>")
                             .about("Control led strips")
                             .arg(Arg::with_name("verbose")
                                 .short("v")
                                 .long("verbose")
                                 .multiple(true)
-                                .help("Show some debugging prints"))
+                                .help("Show some debugging prints. Maximum level is 2"))
                             .arg(Arg::with_name("sequence")
                                 .short("s")
                                 .long("sequence-number")
@@ -57,7 +57,7 @@ fn main() {
                             .arg(Arg::with_name("hostid")
                                 .short("h")
                                 .long("hostid")
-                                .help("Sets the host id")
+                                .help("Sets the hostid")
                                 .takes_value(true))
                             .arg(Arg::with_name("offset")
                                 .short("o")
@@ -108,15 +108,26 @@ fn main() {
     blue = value_t!(matches.value_of("blue"),  u8).unwrap_or(0);
     white = value_t!(matches.value_of("white"), u8).unwrap_or(0);
 
-    match matches.occurrences_of("v") {
+    match matches.occurrences_of("verbose") {
         0 => {},
         1 => {
-            println!("Using address: {}", address);
-            println!("Value for red: {}, green: {}, blue: {}, white: {}",
-                     red, green, blue, white);
-            println!("Leds to fill: {}", number_of_leds);
+            println!("Address:    {}", address);
+            println!("Red:        {}", red);
+            println!("Green:      {}", green);
+            println!("Blue:       {}", blue);
+            println!("White:      {}", white);
         },
-        2 | _ => {},
+        2 | _ => {
+            println!("Address:    {}", address);
+            println!("Red:        {}", red);
+            println!("Green:      {}", green);
+            println!("Blue:       {}", blue);
+            println!("White:      {}", white);
+            println!("Sequence:   {}", sequence_number);
+            println!("Offset:     {}", offset);
+            println!("Hostid:     {}", hostid);
+            println!("Led count:  {}", number_of_leds);
+        },
     }
 
     match send(&socket, &String::from(address), sequence_number, hostid,
